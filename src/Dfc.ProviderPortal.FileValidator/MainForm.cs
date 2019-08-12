@@ -17,9 +17,6 @@ namespace Dfc.Providerportal.FileValidator
         private const int _larsCharacterLength = 8;
         private const string _larsHeader = "LARS_QAN";
         private const string _courseNameHeader = "COURSE_NAME";
-        private const string Quote = "\"";
-        private const string EscapedQuote = "\"\"";
-        private static char[] CharactersToQuote = { ',', '"' };
 
         public MainForm()
         {
@@ -48,9 +45,7 @@ namespace Dfc.Providerportal.FileValidator
 
             if (File.Exists(file))
             {
-                bool isHeader = true;
-                int lineCounter = 1;
-                Dictionary<string, int> headerOrderList = null;
+
                 try
                 {
                     outputTextBox.Clear();
@@ -59,26 +54,17 @@ namespace Dfc.Providerportal.FileValidator
                     {
                         using (var csv = new CsvReader(reader))
                         {
+
                             csv.Read();
                             csv.ReadHeader();
-
+                            bool isHeaderValidated = ValidateHeader(csv.Context.NamedIndexes.Select(x => x.Key).ToArray());
                             while (csv.Read())
                             {
-                                var line = reader.ReadLine();
-                                EscapeCommas(line);
-                                var lineItems = line.Split(',');
-                                if (isHeader)
+                                if(isHeaderValidated)
                                 {
-                                    ValidateHeader(lineItems, lineCounter);
-                                    headerOrderList = CreateHeaderOrderList(lineItems);
-                                    isHeader = false;
+                                    ValidateLARSNumber(csv.GetField(_larsHeader).Trim(), csv.Context.RawRow);
+                                    ValidateCourseName(csv.GetField(_courseNameHeader).Trim(), csv.Context.RawRow);
                                 }
-                                else
-                                {
-                                    ValidateLARSNumber(lineItems[headerOrderList[_larsHeader]], lineCounter);
-                                    ValidateCourseName(lineItems[headerOrderList[_courseNameHeader]], lineCounter);
-                                }
-                                lineCounter++;
                             }
                         }
                         
@@ -86,7 +72,7 @@ namespace Dfc.Providerportal.FileValidator
                 }
                 catch (Exception ex)
                 {
-                    AppendTextBox($"Line {lineCounter}: Could not continue processing. Stopping validation. Error: {ex} ");
+                    AppendTextBox($"Could not continue processing. Stopping validation. Error: {ex} ");
                 }
                 finally
                 {
@@ -111,7 +97,7 @@ namespace Dfc.Providerportal.FileValidator
             }
             outputTextBox.Text += $"{value}\r\n";
         }
-        private void ValidateHeader(string[] headerItems, int lineCounter)
+        private bool ValidateHeader(string[] headerItems)
         {
             string[] requiredHeaders =
             {
@@ -128,18 +114,10 @@ namespace Dfc.Providerportal.FileValidator
             var missingItems = requiredHeaders.Except(headerItems);
             if (missingItems.Any())
             {
-                AppendTextBox($"Line {lineCounter}: The following headers are missing: {string.Join(", ", missingItems)}");
+                AppendTextBox($"Line 1: The following headers are missing: {string.Join(", ", missingItems)}. Please resolve, and re-run validation.");
+                return false;
             }
-        }
-        private Dictionary<string, int> CreateHeaderOrderList(string[] headerItems)
-        {
-            Dictionary<string, int> headerOrderList = new Dictionary<string, int>();
-
-            for (int i = 0; i < headerItems.Length; i++)
-            {
-                headerOrderList.Add(headerItems[i], i);
-            }
-            return headerOrderList;
+            return true;
         }
         private void ValidateLARSNumber(string LARS, int lineCounter)
         {
@@ -152,14 +130,6 @@ namespace Dfc.Providerportal.FileValidator
             if (courseName.Length == 0)
                 AppendTextBox($"Line {lineCounter}: Empty Course Name");
 
-        }
-        internal static string EscapeCommas(string s)
-       {
-            if (s.Contains(Quote))
-                s = s.Replace(Quote, EscapedQuote);
-            if (s.IndexOfAny(CharactersToQuote) > -1)
-                s = Quote + s + Quote;
-            return s;
         }
     }
 }
