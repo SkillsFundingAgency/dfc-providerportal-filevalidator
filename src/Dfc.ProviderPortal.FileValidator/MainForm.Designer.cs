@@ -36,6 +36,7 @@
             // 
             // selectFileTextBox
             // 
+            this.selectFileTextBox.Enabled = false;
             this.selectFileTextBox.Location = new System.Drawing.Point(12, 32);
             this.selectFileTextBox.Name = "selectFileTextBox";
             this.selectFileTextBox.Size = new System.Drawing.Size(473, 20);
@@ -67,6 +68,7 @@
             this.validateFileButton.TabIndex = 3;
             this.validateFileButton.Text = "Validate File";
             this.validateFileButton.UseVisualStyleBackColor = true;
+            this.validateFileButton.Click += new System.EventHandler(this.ValidateFileButton_Click);
             // 
             // MainForm
             // 
